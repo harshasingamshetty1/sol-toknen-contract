@@ -17,7 +17,8 @@ describe("token-contract", () => {
   const program = anchor.workspace
     .SolToknenContract as Program<SolToknenContract>;
   // Generate a random keypair that will represent our token
-  // Token Address
+  // Token Address.
+  // Here, the contract is not associated with this address yet.
   const mintKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
   // AssociatedTokenAccount for anchor's workspace wallet
   // Our wallet's ATA
@@ -27,7 +28,7 @@ describe("token-contract", () => {
     // Get anchor's wallet's public key
     // our wallet we use for testing
     const key = anchor.AnchorProvider.env().wallet.publicKey;
-    // Get the amount of SOL needed to pay rent for our Token Mint
+    // Get the amount of SOL needed to pay rent for our Token contract
     const lamports: number =
       await program.provider.connection.getMinimumBalanceForRentExemption(
         MINT_SIZE
@@ -42,14 +43,17 @@ describe("token-contract", () => {
     // Fires a list of instructions
     const mint_tx = new anchor.web3.Transaction().add(
       // Use anchor to create an account from the mint key that we created
+      //here we are actually creating the account for our contract
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: key,
-        newAccountPubkey:  .publicKey,
+        newAccountPubkey: mintKey.publicKey,
         space: MINT_SIZE,
         programId: TOKEN_PROGRAM_ID,
         lamports,
       }),
       // Fire a transaction to create our mint account that is controlled by our anchor wallet
+      // This means new mint account is associated with our mintKey
+
       createInitializeMintInstruction(mintKey.publicKey, 0, key, key),
       // Create the ATA account that is associated with our mint on our anchor wallet
       createAssociatedTokenAccountInstruction(
@@ -77,7 +81,7 @@ describe("token-contract", () => {
     await program.methods
       .mintToken()
       .accounts({
-        mint: mintKey.publicKey,
+        mintToken: mintKey.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         tokenAccount: associatedTokenAccount,
         authority: key,
